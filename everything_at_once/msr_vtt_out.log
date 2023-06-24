@@ -1,0 +1,25 @@
+/var/spool/slurmd/job3423951/slurm_script: line 11: ​: command not found
+NOTE: This module uses Singularity. Some commands execute inside the container
+(e.g. python3, pip3).
+
+This module has been installed by CSC and is still experimental and subject to
+change. For further information see: https://docs.csc.fi/apps/pytorch/
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) pytorch/2.0
+
+NOTE: This module uses Singularity. Some commands execute inside the container
+(e.g. python3, pip3).
+
+This module has been installed by CSC and is still experimental and subject to
+change. For further information see: https://docs.csc.fi/apps/pytorch/
+
+/var/spool/slurmd/job3423951/slurm_script: line 14: ​: command not found
+/var/spool/slurmd/job3423951/slurm_script: line 17: ​: command not found
+/var/spool/slurmd/job3423951/slurm_script: line 22: ​: command not found
+/var/spool/slurmd/job3423951/slurm_script: line 23: ​: command not found
+/var/spool/slurmd/job3423951/slurm_script: line 24: ​: command not found
+/usr/bin/python: can't open file '/pfs/lustrep2/scratch/project_462000189/pranav/everything_at_once/everything_at_once/train.py': [Errno 2] No such file or directory
+srun: error: nid005004: task 0: Exited with exit code 2
+srun: launch/slurm: _step_signal: Terminating StepId=3423951.0

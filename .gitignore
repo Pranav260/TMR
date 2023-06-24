@@ -1,0 +1,13 @@
+__pycache__
+bin
+data
+etc
+lib
+log_files
+pretrained_models
+test_1k_msrvtt
+TrainValVideo
+arch.jpg
+pos16.pt
+share
+output
