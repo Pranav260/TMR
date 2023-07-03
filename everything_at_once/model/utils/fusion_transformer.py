@@ -9,14 +9,14 @@ from everything_at_once.model.utils.layers import FusionBlock
 
 class FusionTransformer(nn.Module):
     def __init__(self, embed_dim=768, depth=1, num_heads=12, mlp_ratio=4., qkv_bias=True,
-                 drop_rate=0., attn_drop_rate=0., drop_path_rate=0., norm_layer=None,
+                 drop_rate=0., attn_drop_rate=0., drop_path_rate=0., attn_type = False, norm_layer=None,
                  act_layer=None,
                  use_cls_token=False,
                  ):
         super().__init__()
 
         self.embed_dim = embed_dim
-
+        self.attn_type = attn_type
         if use_cls_token:
             self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
         else:
@@ -27,12 +27,22 @@ class FusionTransformer(nn.Module):
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
         act_layer = act_layer or nn.GELU
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-        self.blocks = nn.Sequential(*[
-            FusionBlock(
-                dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
-                attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer,
-            )
-            for i in range(depth)])
+
+        if attn_type == False:
+            self.blocks = nn.Sequential(*[
+                FusionBlock(
+                    dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
+                    attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer, attn_flag= False
+                )
+                for i in range(depth)])
+        else:
+            self.blocks = nn.Sequential(*[
+                FusionBlock(
+                    dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
+                    attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer, attn_flag= True
+                )
+                for i in range(depth)])
+
 
         self.norm = norm_layer(embed_dim) # TODO: not needed, remove?
         self.init_weights()
@@ -52,6 +62,7 @@ class FusionTransformer(nn.Module):
         # concatenate attention masks
         tokens_mask = [x['attention_mask'] for x in data if x is not None]
         tokens_mask = torch.cat(tokens_mask, dim=1)
+
 
         # concatenate cls token
         if self.cls_token is None:

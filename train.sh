@@ -7,7 +7,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --mem-per-cpu=8000
 #SBATCH --time=10:00:00
-#SBATCH --output=clip_1k_depth_2_bs_128_force_cross_modal.log
+#SBATCH --output=depth_2_paper_arch_loss_tv_<->check.log
 module use /appl/local/csc/soft/ai/modulefiles/
 module load pytorch
 export PYTHONUSERBASE=/scratch/project_462000189/pranav/everything_at_once

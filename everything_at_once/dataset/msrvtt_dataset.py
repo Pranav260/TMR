@@ -98,7 +98,7 @@ class MSRVTT_Dataset(Dataset):
         if self.training:
             caption = random.choice(self.data[idx]['caption'])
         else:
-            caption = self.data[idx]['eval_caption'] #random.choice(self.data[idx]['caption'])  
+            caption = self.data[idx]['eval_caption']  
         words = _tokenize_text(caption)
         text, text_mask, raw_text = create_text_features(words, self.max_words, self.we, self.we_dim)
 

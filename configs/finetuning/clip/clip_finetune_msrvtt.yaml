@@ -4,7 +4,7 @@ data_loader:
   type: FeatureDataloader
   args:
     num_workers: 8
-    batch_size: 128
+    batch_size: 64
     shuffle: true
     drop_last: true
     dataset_name: 'MSRVTT'
@@ -57,9 +57,9 @@ loss:
     tv_weight: 1
     ta_weight: 1
     va_weight: 1
-    t_va_weight: 0
-    v_ta_weight: 0
-    a_tv_weight: 0
+    t_va_weight: 1
+    v_ta_weight: 1
+    a_tv_weight: 1
 
 trainer:
   epochs: 60

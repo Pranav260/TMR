@@ -16,7 +16,7 @@ class EverythingAtOnceModel(nn.Module):
                  fusion_params,
                  video_max_tokens=None,
                  text_max_tokens=None,
-                 audio_max_num_STFT_frames=None,
+                 audio_max_num_STFT_frames=None,  
                  projection_dim=6144,
                  token_projection='gated',
                  projection='gated',
@@ -28,12 +28,15 @@ class EverythingAtOnceModel(nn.Module):
                  ):
         super().__init__()
 
-        self.fusion = FusionTransformer(**fusion_params)
+        self.fusion = FusionTransformer(**fusion_params,attn_type= False)
+        self.fusion_t = FusionTransformer(**fusion_params)
+        self.fusion_v = FusionTransformer(**fusion_params)
+        self.fusion_a = FusionTransformer(**fusion_params)
 
         self.individual_projections = individual_projections
         self.use_positional_emb = use_positional_emb
         self.strategy_audio_pooling = strategy_audio_pooling
-        #self.cross_modal = cross_modal
+        self.cross_modal = cross_modal
 
         embed_dim = fusion_params['embed_dim']
         self.video_norm_layer = nn.LayerNorm(embed_dim, eps=1e-6)
@@ -138,17 +141,12 @@ class EverythingAtOnceModel(nn.Module):
         return {'all_tokens': x, 'attention_mask': attention_mask, 'special_token_mask': special_token_mask,
                 'nonempty_input_mask': nonempty_input_mask}
 
-    def forward(self, data, force_cross_modal=True):
+    def forward(self, data, force_cross_modal=False):
         output = {}
-
-        def _get_average(tokens, attention_mask):
-            attention_mask = attention_mask.unsqueeze(2).expand_as(tokens)
-            return (tokens * attention_mask).sum(1) / attention_mask.sum(1)
 
         text_raw_embed = self.extract_text_tokens(data['text'], data['text_mask'])
         video_raw_embed = self.extract_video_tokens(data['video'], data['video_mask'])
         audio_raw_embed = self.extract_audio_tokens(data['audio'], data['audio_mask'], data['audio_STFT_nframes'])
-
         output['text_nonempty_input_mask'] = text_raw_embed['nonempty_input_mask']
         output['video_nonempty_input_mask'] = video_raw_embed['nonempty_input_mask']
         output['audio_nonempty_input_mask'] = audio_raw_embed['nonempty_input_mask']
@@ -159,15 +157,42 @@ class EverythingAtOnceModel(nn.Module):
             video_raw_embed['all_tokens'] = video_raw_embed['all_tokens'] + self.video_pos_embed
             audio_raw_embed['all_tokens'] = audio_raw_embed['all_tokens'] + self.audio_pos_embed
 
+        text = self.fusion_t(text=text_raw_embed)['text']
+        video = self.fusion_v(video=video_raw_embed)['video']
+        audio = self.fusion_a(audio=audio_raw_embed)['audio']
+
         if self.individual_projections:
             text_proj, video_proj, audio_proj = self.text_proj, self.video_proj, self.audio_proj
         else:
             text_proj, video_proj, audio_proj = self.proj, self.proj, self.proj
-        
-        output["text_embed"] = text_proj(_get_average(text_raw_embed['all_tokens'],text_raw_embed['attention_mask']))
-        output["video_embed"] = video_proj(_get_average(video_raw_embed['all_tokens'],video_raw_embed['attention_mask']))
-        output["audio_embed"] = audio_proj(_get_average(audio_raw_embed['all_tokens'],audio_raw_embed['attention_mask']))
 
+        #encoder outputs from single modality, contrastive loss is calculated between each pair, bidirection al or not ? Exp
+        output["text_embed"] = text_proj(text['embed'])
+        output["video_embed"] = video_proj(video['embed'])
+        output["audio_embed"] = audio_proj(audio['embed'])
+
+        if self.cross_modal or force_cross_modal:
+            tv = self.fusion(text=text,
+                             video=video)
+            ta = self.fusion(text=text_raw_embed,
+                             audio=audio_raw_embed)
+            va = self.fusion(video=video_raw_embed,
+                             audio=audio_raw_embed)
+
+            if self.fusion.cls_token is not None:
+                assert not self.individual_projections
+                output["tv_embed"] = self.proj(tv['text_video']['embed'])
+                output["ta_embed"] = self.proj(ta['text_audio']['embed'])
+                output["va_embed"] = self.proj(va['video_audio']['embed'])
+            else:
+                output["tv_embed"] = (normalize_embeddings(text_proj(tv['text']['embed'])) +
+                                      normalize_embeddings(video_proj(tv['video']['embed']))) / 2
+
+                output["ta_embed"] = (normalize_embeddings(text_proj(ta['text']['embed'])) +
+                                      normalize_embeddings(audio_proj(ta['audio']['embed']))) / 2
+
+                output["va_embed"] = (normalize_embeddings(video_proj(va['video']['embed'])) +
+                                      normalize_embeddings(audio_proj(va['audio']['embed']))) / 2
         if force_cross_modal:
             #  needed for ablation
             output["t+v_embed"] = (normalize_embeddings(output["text_embed"]) +
@@ -176,7 +201,7 @@ class EverythingAtOnceModel(nn.Module):
                                    normalize_embeddings(output["audio_embed"])) / 2
             output["v+a_embed"] = (normalize_embeddings(output["video_embed"]) +
                                    normalize_embeddings(output["audio_embed"])) / 2
-
+        
         return output
 
 class EverythingAtOnceModel_TV_Only(EverythingAtOnceModel):
