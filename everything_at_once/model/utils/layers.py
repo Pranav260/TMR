@@ -68,7 +68,7 @@ class FusionBlock(nn.Module):
         if attn_flag == False:
             self.attn = FusionAttention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         else:
-            self.attn = CrossAttention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
+            self.attn_cross = CrossAttention_updated(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
@@ -76,10 +76,17 @@ class FusionBlock(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-    def forward(self, x, attention_mask=None):
-        x = x + self.drop_path(self.attn(self.norm1(x), attention_mask))
-        x = x + self.drop_path(self.mlp(self.norm2(x)))
+    def forward(self, x = None,x_ = None,attention_mask_x = None, attention_mask_x_ = None, attention_mask=None):
+        if x_ is None:
+            x = x + self.drop_path(self.attn(self.norm1(x), attention_mask))
+            x = x + self.drop_path(self.mlp(self.norm2(x)))
+            print(x.shape)
+        else:
+            x = x + self.drop_path(self.attn_cross(self.norm1(x),self.norm1(x_), attention_mask_x,attention_mask_x_))
+            x = x + self.drop_path(self.mlp(self.norm2(x)))
+
         return x
+
 
 class CrossAttention(Attention):
     """
@@ -88,13 +95,16 @@ class CrossAttention(Attention):
     """
     def forward(self, x, attention_mask=None):
         B, N, C = x.shape
+        #print(x.shape)
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]
-
+        q, k, v = qkv[:, :, 0], qkv[:, :, 1], qkv[:, :, 2]
+        print("before q",q.shape," beforek",k.shape," beforev",v.shape)
         # Compute cross-attention
-        q = q.unsqueeze(1).repeat(1, N, 1, 1)  # (B, N, num_heads, N, C // num_heads)
-        k = k.unsqueeze(3).repeat(1, 1, self.num_heads, 1, 1)  # (B, N, num_heads, N, C // num_heads)
-        v = v.unsqueeze(3).repeat(1, 1, self.num_heads, 1, 1)  # (B, N, num_heads, N, C // num_heads)
+        q = q.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
+        k = k.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
+        v = v.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
+
+        print("q",q.shape,"k",k.shape,"v",v.shape)
 
         attn = (q @ k.transpose(-2, -1)) * self.scale  # (B, N, num_heads, N, N)
 
@@ -111,6 +121,51 @@ class CrossAttention(Attention):
         x = self.proj_drop(x)
         return x
 
+class CrossAttention_updated(Attention): # for depth 2 this does not work, why ??
+    """
+    Adopted from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
+    Copyright 2020, Ross Wightman
+    """
+    def forward(self, x =  None, x_ = None, attention_mask_x=None, attention_mask_x_=None):
+        #print("error here",x.shape)
+        B, N, C = x.shape
+        B,N_, C_ = x_.shape
+
+        qkv_x = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv_x_ = self.qkv(x_).reshape(B, N_, 3, self.num_heads, C_ // self.num_heads).permute(2, 0, 3, 1, 4)
+
+        q_x, k_x, v_x = qkv_x[0], qkv_x[1], qkv_x[2]
+        q_x_, k_x_, v_x_ = qkv_x_[0], qkv_x_[1], qkv_x_[2]
+
+        attn = (q_x @ k_x_.transpose(-2, -1)) * self.scale
+        #print(attn.shape)
+        
+        #print(attention_mask_x.shape)
+        #if attention_mask_x is not None:
+            #attention_mask_x = attention_mask_x.unsqueeze(1).unsqueeze(2)  # Expand dimensions for broadcasting
+            #zero_attention_mask_x = (attention_mask_x == 0).view(B, self.num_heads,N,N_ ).expand_as(attn)  # (bs, n_heads, q_length, k_length)
+            #attn.masked_fill_(zero_attention_mask_x, -float("inf"))  # (bs, n_heads, q_length, k_length)
+
+        if attention_mask_x_ is not None:
+            # Expand dimensions for broadcasting
+            zero_attention_mask_x_ = (attention_mask_x_ == 0).view(B,1,1,N_).repeat(1,64,N,1)
+            #print("zero attn mask.shape",zero_attention_mask_x_.shape)  # (B, 1, N_, 1)
+            attn.masked_fill_(zero_attention_mask_x_, -float("inf"))
+            #zero_attention_mask_x_ = (attention_mask_x == 0).view(B, self.num_heads,N_ ,N).expand_as(attn) # (bs, n_heads, q_length, k_length)
+            #attn.masked_fill_(zero_attention_mask_x_, -float("inf"))  # (bs, n_heads, q_length, k_length)
+
+
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+
+        x = (attn @ v_x_).transpose(1, 2).reshape(B, N, C)
+        #print("shape of x after attn", x.shape)
+        x = self.proj(x)
+        #print("shape of x after proj",x.shape)
+        x = self.proj_drop(x)
+        #print("after proj drop",x.shape)
+        return x
+
 
 class FusionAttention(Attention):
     """
@@ -119,7 +174,10 @@ class FusionAttention(Attention):
     """
     def forward(self, x, attention_mask=None):
         B, N, C = x.shape
+        #print("input x ",x.shape)
+        #print(self.qkv(x).shape)
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        #print("main qkv shape",qkv.shape)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
@@ -134,6 +192,7 @@ class FusionAttention(Attention):
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
         x = self.proj_drop(x)
+        #print("shape of proj drop in fusion attn",x.shape)
         return x
 
 
@@ -146,118 +205,4 @@ def get_projection(input_dim, output_dim, projection_type):
         return nn.Identity()
     else:
         raise NotImplementedError
-
-class FusionTransformer(nn.Module):
-    def __init__(self, embed_dim=768, depth=1, num_heads=12, mlp_ratio=4., qkv_bias=True,
-                 drop_rate=0., attn_drop_rate=0., drop_path_rate=0., norm_layer=None,
-                 act_layer=None,
-                 use_cls_token=False,
-                 ):
-        super().__init__()
-
-        self.embed_dim = embed_dim
-
-        if use_cls_token:
-            self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
-        else:
-            self.cls_token = None
-
-        self.masking_token = nn.Parameter(torch.zeros(embed_dim))
-
-        norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
-        act_layer = act_layer or nn.GELU
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
-        self.blocks = nn.Sequential(*[
-            FusionBlock(
-                dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,
-                attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer, act_layer=act_layer,
-            )
-            for i in range(depth)])
-
-        self.norm = norm_layer(embed_dim) # TODO: not needed, remove?
-        self.init_weights()
-
-    def init_weights(self):
-        trunc_normal_(self.masking_token, std=.02)
-        if self.cls_token is not None:
-            trunc_normal_(self.cls_token, std=.02)
-        #self.apply(_init_vit_weights)
-
-    def forward(self, text=None, video=None, audio=None):
-        # concatenate tokens
-        data = [text, video, audio]
-        tokens = [x['all_tokens'] for x in data if x is not None]
-        tokens = torch.cat(tokens, dim=1)
-
-        # concatenate attention masks
-        tokens_mask = [x['attention_mask'] for x in data if x is not None]
-        tokens_mask = torch.cat(tokens_mask, dim=1)
-
-        # concatenate cls token
-        if self.cls_token is None:
-            offset = 0
-        else:
-            cls_token = self.cls_token.expand(tokens.shape[0], -1, -1)
-            tokens = torch.cat((cls_token, tokens), dim=1)
-            cls_token_mask = torch.ones((1, 1)).to(tokens_mask.device).expand(tokens_mask.shape[0], -1)
-            tokens_mask = torch.cat((cls_token_mask, tokens_mask), dim=1)
-            offset = 1
-
-        for block in self.blocks:
-            tokens = block(tokens, attention_mask=tokens_mask)
-
-        output = collections.OrderedDict()
-
-        def _get_average(tokens, attention_mask):
-            attention_mask = attention_mask.unsqueeze(2).expand_as(tokens)
-            return (tokens * attention_mask).sum(1) / attention_mask.sum(1)
-
-        if text is not None:
-            n_tokens = text['all_tokens'].size(1)
-            attention_mask = text['attention_mask']
-            all_tokens = tokens[:, offset:offset + n_tokens]
-
-            offset += n_tokens
-            output['text'] = {
-                "all_tokens": all_tokens,
-                "attention_mask": attention_mask,
-            }
-
-        if video is not None:
-            n_tokens = video['all_tokens'].size(1)
-            attention_mask = video['attention_mask']
-            all_tokens = tokens[:, offset:offset + n_tokens]
-
-            offset += n_tokens
-            output['video'] = {
-                "all_tokens": all_tokens,
-                "attention_mask": attention_mask,
-            }
-
-        if audio is not None:
-            n_tokens = audio['all_tokens'].size(1)
-            attention_mask = audio['attention_mask']
-            all_tokens = tokens[:, offset: offset + n_tokens]
-
-            offset += n_tokens
-            output['audio'] = {
-                "all_tokens": all_tokens,
-                "attention_mask": attention_mask,
-            }
-
-        if self.cls_token is None:
-            for key, value in output.items():
-                output[key]['embed'] = _get_average(value["all_tokens"], value['attention_mask'])
-        else:
-            modalities = list(output.keys())
-            modalities = '_'.join(modalities)
-            if modalities not in output:
-                output[modalities] = {}
-            output[modalities]['embed'] = tokens[:, 0]
-
-        return output
-
-
-
-
 

@@ -28,7 +28,7 @@ class EverythingAtOnceModel(nn.Module):
                  ):
         super().__init__()
 
-        self.fusion = FusionTransformer(**fusion_params,attn_type= False)
+        self.fusion = FusionTransformer(**fusion_params,attn_type= True)
         self.fusion_t = FusionTransformer(**fusion_params)
         self.fusion_v = FusionTransformer(**fusion_params)
         self.fusion_a = FusionTransformer(**fusion_params)
@@ -167,32 +167,30 @@ class EverythingAtOnceModel(nn.Module):
             text_proj, video_proj, audio_proj = self.proj, self.proj, self.proj
 
         #encoder outputs from single modality, contrastive loss is calculated between each pair, bidirection al or not ? Exp
+        print("text embed shape before proj i/p",text['embed'].shape)
         output["text_embed"] = text_proj(text['embed'])
         output["video_embed"] = video_proj(video['embed'])
         output["audio_embed"] = audio_proj(audio['embed'])
 
         if self.cross_modal or force_cross_modal:
-            tv = self.fusion(text=text,
-                             video=video)
+            tv = self.fusion(text=text_raw_embed,
+                             video=video_raw_embed)
             ta = self.fusion(text=text_raw_embed,
                              audio=audio_raw_embed)
             va = self.fusion(video=video_raw_embed,
                              audio=audio_raw_embed)
 
+            print("text embed shape before proj i/p",tv['tv']['embed'].shape)
             if self.fusion.cls_token is not None:
                 assert not self.individual_projections
                 output["tv_embed"] = self.proj(tv['text_video']['embed'])
                 output["ta_embed"] = self.proj(ta['text_audio']['embed'])
                 output["va_embed"] = self.proj(va['video_audio']['embed'])
             else:
-                output["tv_embed"] = (normalize_embeddings(text_proj(tv['text']['embed'])) +
-                                      normalize_embeddings(video_proj(tv['video']['embed']))) / 2
-
-                output["ta_embed"] = (normalize_embeddings(text_proj(ta['text']['embed'])) +
-                                      normalize_embeddings(audio_proj(ta['audio']['embed']))) / 2
-
-                output["va_embed"] = (normalize_embeddings(video_proj(va['video']['embed'])) +
-                                      normalize_embeddings(audio_proj(va['audio']['embed']))) / 2
+                output["tv_embed"] = self.text_proj(tv['tv']['embed'])
+                output["ta_embed"] = self.text_proj(ta['ta']['embed'])
+                output["va_embed"] = self.video_proj(va['va']['embed'])
+    
         if force_cross_modal:
             #  needed for ablation
             output["t+v_embed"] = (normalize_embeddings(output["text_embed"]) +
