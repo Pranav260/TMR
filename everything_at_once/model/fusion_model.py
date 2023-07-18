@@ -45,7 +45,7 @@ class EverythingAtOnceModel(nn.Module):
 
         # audio token preprocess
         self.davenet = load_DAVEnet(v2=davenet_v2)
-
+ 
         if audio_max_num_STFT_frames is not None:
             if davenet_v2:
                 audio_max_tokens = int(audio_max_num_STFT_frames / 64)
@@ -167,12 +167,17 @@ class EverythingAtOnceModel(nn.Module):
             text_proj, video_proj, audio_proj = self.proj, self.proj, self.proj
 
         #encoder outputs from single modality, contrastive loss is calculated between each pair, bidirection al or not ? Exp
-        print("text embed shape before proj i/p",text['embed'].shape)
+        #print("text embed shape before proj i/p",text['embed'].shape)
         output["text_embed"] = text_proj(text['embed'])
         output["video_embed"] = video_proj(video['embed'])
         output["audio_embed"] = audio_proj(audio['embed'])
 
         if self.cross_modal or force_cross_modal:
+            #print(text_raw_embed['all_tokens'].shape)
+            #print(text['all_tokens_fusion'].shape)
+            text_raw_embed['all_tokens'] = text['all_tokens_fusion']
+            video_raw_embed['all_tokens'] = video['all_tokens_fusion']
+            audio_raw_embed['all_tokens'] = audio['all_tokens_fusion']
             tv = self.fusion(text=text_raw_embed,
                              video=video_raw_embed)
             ta = self.fusion(text=text_raw_embed,
@@ -180,7 +185,7 @@ class EverythingAtOnceModel(nn.Module):
             va = self.fusion(video=video_raw_embed,
                              audio=audio_raw_embed)
 
-            print("text embed shape before proj i/p",tv['tv']['embed'].shape)
+            #print("text embed shape before proj i/p",tv['tv']['embed'].shape)
             if self.fusion.cls_token is not None:
                 assert not self.individual_projections
                 output["tv_embed"] = self.proj(tv['text_video']['embed'])

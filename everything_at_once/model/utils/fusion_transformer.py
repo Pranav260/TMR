@@ -92,10 +92,12 @@ class FusionTransformer(nn.Module):
             if text is not None:
                 n_tokens = text['all_tokens'].size(1)
                 attention_mask = text['attention_mask']
+                all_tokens_fusion = tokens[:,:,:]
                 all_tokens = tokens[:, offset:offset + n_tokens]
 
                 offset += n_tokens
                 output['text'] = {
+                    "all_tokens_fusion" : all_tokens_fusion,
                     "all_tokens": all_tokens,
                     "attention_mask": attention_mask,
                 }
@@ -103,10 +105,12 @@ class FusionTransformer(nn.Module):
             if video is not None:
                 n_tokens = video['all_tokens'].size(1)
                 attention_mask = video['attention_mask']
+                all_tokens_fusion = tokens[:,:,:]
                 all_tokens = tokens[:, offset:offset + n_tokens]
 
                 offset += n_tokens
                 output['video'] = {
+                    "all_tokens_fusion" : all_tokens_fusion,
                     "all_tokens": all_tokens,
                     "attention_mask": attention_mask,
                 }
@@ -114,10 +118,11 @@ class FusionTransformer(nn.Module):
             if audio is not None:
                 n_tokens = audio['all_tokens'].size(1)
                 attention_mask = audio['attention_mask']
+                all_tokens_fusion = tokens[:,:,:]
                 all_tokens = tokens[:, offset: offset + n_tokens]
-
                 offset += n_tokens
                 output['audio'] = {
+                    "all_tokens_fusion" : all_tokens_fusion,
                     "all_tokens": all_tokens,
                     "attention_mask": attention_mask,
                 }

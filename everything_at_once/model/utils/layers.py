@@ -80,7 +80,6 @@ class FusionBlock(nn.Module):
         if x_ is None:
             x = x + self.drop_path(self.attn(self.norm1(x), attention_mask))
             x = x + self.drop_path(self.mlp(self.norm2(x)))
-            print(x.shape)
         else:
             x = x + self.drop_path(self.attn_cross(self.norm1(x),self.norm1(x_), attention_mask_x,attention_mask_x_))
             x = x + self.drop_path(self.mlp(self.norm2(x)))
@@ -94,11 +93,12 @@ class CrossAttention(Attention):
     Copyright 2020, Ross Wightman
     """
     def forward(self, x, attention_mask=None):
-        B, N, C = x.shape
+        if x.ndim == 3:
+            B, N, C = x.shape
         #print(x.shape)
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[:, :, 0], qkv[:, :, 1], qkv[:, :, 2]
-        print("before q",q.shape," beforek",k.shape," beforev",v.shape)
+        #print("before q",q.shape," beforek",k.shape," beforev",v.shape)
         # Compute cross-attention
         q = q.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
         k = k.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
@@ -128,8 +128,12 @@ class CrossAttention_updated(Attention): # for depth 2 this does not work, why ?
     """
     def forward(self, x =  None, x_ = None, attention_mask_x=None, attention_mask_x_=None):
         #print("error here",x.shape)
-        B, N, C = x.shape
-        B,N_, C_ = x_.shape
+        if x.ndim == 3 and x_.ndim == 3:
+            B, N, C = x.shape
+            B,N_, C_ = x_.shape
+        else:
+            B,C = x.shape
+            B,C_ = x_.shape
 
         qkv_x = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         qkv_x_ = self.qkv(x_).reshape(B, N_, 3, self.num_heads, C_ // self.num_heads).permute(2, 0, 3, 1, 4)
