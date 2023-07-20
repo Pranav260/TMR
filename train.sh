@@ -6,8 +6,8 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --gpus-per-node=4
 #SBATCH --mem-per-cpu=8000
-#SBATCH --time=9:30:00
-#SBATCH --output=all_weights_1.log
+#SBATCH --time=12:30:00
+#SBATCH --output=log_files/t-v_t-va-bs-128..log
 module use /appl/local/csc/soft/ai/modulefiles/
 module load pytorch
 export PYTHONUSERBASE=/scratch/project_462000189/pranav/everything_at_once
