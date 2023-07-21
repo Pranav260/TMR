@@ -96,8 +96,17 @@ class MSRVTT_Dataset(Dataset):
 
         # choose a caption
         if self.training:
+            try:
+                caption_clip = random.choice(self.data_2D[idx]['clip_text'])
+            except:
+                print(self.data_2D[idx])
+            #caption_clip =  np.expand_dims(caption_clip,axis = 1)
+            #caption_clip = np.transpose(caption_clip,)
+            caption_clip = torch.from_numpy(caption_clip).unsqueeze(0).permute(1,0)
             caption = random.choice(self.data[idx]['caption'])
         else:
+            caption_clip = self.data_2D[idx]['clip_text_eval']
+            caption_clip = torch.from_numpy(caption_clip).unsqueeze(0).permute(1,0)
             caption = self.data[idx]['eval_caption']  
         words = _tokenize_text(caption)
         text, text_mask, raw_text = create_text_features(words, self.max_words, self.we, self.we_dim)
@@ -118,5 +127,6 @@ class MSRVTT_Dataset(Dataset):
         return {'video': video, 'audio': audio, 'text': text, 'audio_STFT_nframes': audio_STFT_nframes,
                 'video_mask': video_mask, 'audio_mask': audio_mask, 'text_mask': text_mask,
                 'raw_text':raw_text,
+                'caption_clip' : caption_clip,
                 'unroll_clips': unroll_clips,
                 'meta': {'paths': id_, 'ids': id_, 'dataset': dataset}}
