@@ -76,49 +76,14 @@ class FusionBlock(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-    def forward(self, x = None,x_ = None,attention_mask_x = None, attention_mask_x_ = None, attention_mask=None):
-        if x_ is None:
+    def forward(self, x = None,attention_mask_x = None, attention_mask_x_ = None, attention_mask=None):
+        if attention_mask_x_ is None:
             x = x + self.drop_path(self.attn(self.norm1(x), attention_mask))
             x = x + self.drop_path(self.mlp(self.norm2(x)))
         else:
-            x = x + self.drop_path(self.attn_cross(self.norm1(x),self.norm1(x_), attention_mask_x,attention_mask_x_))
+            x = x + self.drop_path(self.attn_cross(self.norm1(x),attention_mask_x,attention_mask_x_))
             x = x + self.drop_path(self.mlp(self.norm2(x)))
 
-        return x
-
-
-class CrossAttention(Attention):
-    """
-    Adopted from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
-    Copyright 2020, Ross Wightman
-    """
-    def forward(self, x, attention_mask=None):
-        if x.ndim == 3:
-            B, N, C = x.shape
-        #print(x.shape)
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[:, :, 0], qkv[:, :, 1], qkv[:, :, 2]
-        #print("before q",q.shape," beforek",k.shape," beforev",v.shape)
-        # Compute cross-attention
-        q = q.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
-        k = k.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
-        v = v.permute(0, 3, 1, 2).contiguous()  # (B, num_heads, N, C // num_heads)
-
-        print("q",q.shape,"k",k.shape,"v",v.shape)
-
-        attn = (q @ k.transpose(-2, -1)) * self.scale  # (B, N, num_heads, N, N)
-
-        if attention_mask is not None:
-            zero_attention_mask = (attention_mask == 0).view(B, 1, 1, N, 1).expand_as(attn)  # (B, N, num_heads, N, N)
-            attn.masked_fill_(zero_attention_mask, -float("inf"))  # (B, N, num_heads, N, N)
-
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
-
-        x = (attn @ v).sum(dim=-2)  # (B, N, num_heads, N, C // num_heads)
-        x = x.transpose(1, 2).reshape(B, N, -1)  # (B, num_heads, N, C)
-        x = self.proj(x)
-        x = self.proj_drop(x)
         return x
 
 class CrossAttention_updated(Attention): # for depth 2 this does not work, why ??
@@ -126,26 +91,31 @@ class CrossAttention_updated(Attention): # for depth 2 this does not work, why ?
     Adopted from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
     Copyright 2020, Ross Wightman
     """
-    def forward(self, x =  None, x_ = None, attention_mask_x=None, attention_mask_x_=None):
+    def forward(self,x = None,attention_mask_x=None, attention_mask_x_=None):
         #print("error here",x.shape)
-        if x.ndim == 3 and x_.ndim == 3:
-            B, N, C = x.shape
-            B,N_, C_ = x_.shape
-        else:
-            B,C = x.shape
-            B,C_ = x_.shape
+        x1 = x[:,:attention_mask_x.shape[1],:]
+        x2 = x[:,attention_mask_x.shape[1]:,:]
+        B, N, C = x1.shape
+        B,N_, C_ = x2.shape
+        #print("xi shape=",x1.shape)
+        #print("x2 shape",x2.shape)
 
-        qkv_x = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
-        qkv_x_ = self.qkv(x_).reshape(B, N_, 3, self.num_heads, C_ // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv_x = self.qkv(x1).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv_x_ = self.qkv(x2).reshape(B, N_, 3, self.num_heads, C_ // self.num_heads).permute(2, 0, 3, 1, 4)
 
         q_x, k_x, v_x = qkv_x[0], qkv_x[1], qkv_x[2]
         q_x_, k_x_, v_x_ = qkv_x_[0], qkv_x_[1], qkv_x_[2]
 
-        attn = (q_x @ k_x_.transpose(-2, -1)) * self.scale
+        attn_1 = (q_x @ k_x_.transpose(-2, -1)) * self.scale
+        #print("attn 1 shape",attn_1.shape)
+        attn_2 = (q_x_ @ k_x.transpose(-2, -1)) * self.scale
+        #print("attn 2 shape",attn_2.shape)
         #print(attn.shape)
         
         #print(attention_mask_x.shape)
-        #if attention_mask_x is not None:
+        if attention_mask_x is not None:
+            zero_attention_mask_x = (attention_mask_x == 0).view(B,1,1,N).repeat(1,64,N_,1)
+            attn_2.masked_fill_(zero_attention_mask_x, -float("inf"))
             #attention_mask_x = attention_mask_x.unsqueeze(1).unsqueeze(2)  # Expand dimensions for broadcasting
             #zero_attention_mask_x = (attention_mask_x == 0).view(B, self.num_heads,N,N_ ).expand_as(attn)  # (bs, n_heads, q_length, k_length)
             #attn.masked_fill_(zero_attention_mask_x, -float("inf"))  # (bs, n_heads, q_length, k_length)
@@ -154,18 +124,28 @@ class CrossAttention_updated(Attention): # for depth 2 this does not work, why ?
             # Expand dimensions for broadcasting
             zero_attention_mask_x_ = (attention_mask_x_ == 0).view(B,1,1,N_).repeat(1,64,N,1)
             #print("zero attn mask.shape",zero_attention_mask_x_.shape)  # (B, 1, N_, 1)
-            attn.masked_fill_(zero_attention_mask_x_, -float("inf"))
+            attn_1.masked_fill_(zero_attention_mask_x_, -float("inf"))
             #zero_attention_mask_x_ = (attention_mask_x == 0).view(B, self.num_heads,N_ ,N).expand_as(attn) # (bs, n_heads, q_length, k_length)
             #attn.masked_fill_(zero_attention_mask_x_, -float("inf"))  # (bs, n_heads, q_length, k_length)
 
+        #print("after mas zero1",attn_1.shape)
+        #print("after mas zero2",attn_2.shape)
 
-        attn = attn.softmax(dim=-1)
-        attn = self.attn_drop(attn)
 
-        x = (attn @ v_x_).transpose(1, 2).reshape(B, N, C)
+        attn_1 = attn_1.softmax(dim=-1)
+        attn_1 = self.attn_drop(attn_1)
+
+        attn_2 = attn_2.softmax(dim=-1)
+        attn_2 = self.attn_drop(attn_2)
+
+        x1 = (attn_1 @ v_x_).transpose(1, 2).reshape(B, N, C)
+        x2 = (attn_2 @ v_x).transpose(1, 2).reshape(B, N_, C)
+        x = [x1,x2]
+        x = torch.cat(x,dim = 1)
+
         #print("shape of x after attn", x.shape)
-        x = self.proj(x)
         #print("shape of x after proj",x.shape)
+        x = self.proj(x)
         x = self.proj_drop(x)
         #print("after proj drop",x.shape)
         return x

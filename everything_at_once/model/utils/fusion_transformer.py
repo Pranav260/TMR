@@ -58,6 +58,7 @@ class FusionTransformer(nn.Module):
         #print("text shape",text['all_tokens'].shape,video['all_tokens'].shape,audio['all_tokens'].shape)
         data = [text, video, audio]
         tokens = [x['all_tokens'] for x in data if x is not None]
+        tokens = torch.cat(tokens, dim=1)
         tokens_mask = [x['attention_mask'] for x in data if x is not None]
 
         output = collections.OrderedDict()
@@ -68,9 +69,6 @@ class FusionTransformer(nn.Module):
 
 
         if self.attn_type == False:
-            tokens = torch.cat(tokens, dim=1)
-            
-
             # concatenate attention masks
             tokens_mask = torch.cat(tokens_mask, dim=1)
 
@@ -140,39 +138,45 @@ class FusionTransformer(nn.Module):
             return output
         else:
             #print("tokens shape",tokens[0].shape,tokens[1].shape)
+
             for block in self.blocks:
-                tokens = block(x = tokens[0],x_ = tokens[1], attention_mask_x=tokens_mask[0],
-                               attention_mask_x_= tokens_mask[1])
+                tokens = block(tokens, attention_mask_x=tokens_mask[0], attention_mask_x_= tokens_mask[1])
+            
             offset = 0
-
-            if audio is None:
+            if text is not None:
                 n_tokens = text['all_tokens'].size(1)
                 attention_mask = text['attention_mask']
-                all_tokens = tokens[:, offset: offset + n_tokens]
+                all_tokens_fusion = tokens[:,:,:]
+                all_tokens = tokens[:, offset:offset + n_tokens]
 
                 offset += n_tokens
-                output['tv'] = {
+                output['text'] = {
+                    "all_tokens_fusion" : all_tokens_fusion,
                     "all_tokens": all_tokens,
                     "attention_mask": attention_mask,
                 }
-            
-            if video is None:
-                n_tokens = text['all_tokens'].size(1)
-                attention_mask = text['attention_mask']
-                all_tokens = tokens[:, offset: offset + n_tokens]
-                offset += n_tokens
-                output['ta'] = {
-                    "all_tokens": all_tokens,
-                    "attention_mask": attention_mask,
-                }
-            
-            if text is None:
+
+            if video is not None:
                 n_tokens = video['all_tokens'].size(1)
                 attention_mask = video['attention_mask']
-                all_tokens = tokens[:, offset: offset + n_tokens]
+                all_tokens_fusion = tokens[:,:,:]
+                all_tokens = tokens[:, offset:offset + n_tokens]
 
                 offset += n_tokens
-                output['va'] = {
+                output['video'] = {
+                    "all_tokens_fusion" : all_tokens_fusion,
+                    "all_tokens": all_tokens,
+                    "attention_mask": attention_mask,
+                }
+
+            if audio is not None:
+                n_tokens = audio['all_tokens'].size(1)
+                attention_mask = audio['attention_mask']
+                all_tokens_fusion = tokens[:,:,:]
+                all_tokens = tokens[:, offset: offset + n_tokens]
+                offset += n_tokens
+                output['audio'] = {
+                    "all_tokens_fusion" : all_tokens_fusion,
                     "all_tokens": all_tokens,
                     "attention_mask": attention_mask,
                 }
