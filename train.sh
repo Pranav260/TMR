@@ -7,7 +7,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --mem-per-cpu=8000
 #SBATCH --time=12:30:00
-#SBATCH --output=log_files/fix_depth_err.log
+#SBATCH --output=log_files/d2-cross-attn-t-v-singlemodality.log
 module use /appl/local/csc/soft/ai/modulefiles/
 module load pytorch
 export PYTHONUSERBASE=/scratch/project_462000189/pranav/everything_at_once

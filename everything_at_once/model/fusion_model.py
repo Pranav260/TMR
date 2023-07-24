@@ -169,8 +169,8 @@ class EverythingAtOnceModel(nn.Module):
 
         #encoder outputs from single modality, contrastive loss is calculated between each pair, bidirection al or not ? Exp
         #print("text embed shape before proj i/p",text['embed'].shape)
-        #output["text_embed"] = text_proj(text['embed'])
-        #output["video_embed"] = video_proj(video['embed'])
+        output["text_embed"] = text_proj(text['embed'])
+        output["video_embed"] = video_proj(video['embed'])
         #output["audio_embed"] = audio_proj(audio['embed'])
 
         if self.cross_modal or force_cross_modal:
@@ -193,8 +193,8 @@ class EverythingAtOnceModel(nn.Module):
                 output["ta_embed"] = self.proj(ta['text_audio']['embed'])
                 output["va_embed"] = self.proj(va['video_audio']['embed'])
             else:
-                output["text_embed"] = self.text_proj(tv['text']['embed'])
-                output["video_embed"] = self.video_proj(tv['video']['embed'])
+                #output["text_embed"] = self.text_proj(tv['text']['embed'])
+                #output["video_embed"] = self.video_proj(tv['video']['embed'])
                 output['audio_embed'] =  self.audio_proj(va['audio']['embed'])
                 output["tv_embed"] = (normalize_embeddings(text_proj(tv['text']['embed'])) +
                                       normalize_embeddings(video_proj(tv['video']['embed']))) / 2

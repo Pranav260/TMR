@@ -62,7 +62,7 @@ loss:
     a_tv_weight: 0
 
 trainer:
-  epochs: 100
+  epochs: 20
   use_eval_mode_always: true
   resume_only_model: true
   mixed_precision: true
