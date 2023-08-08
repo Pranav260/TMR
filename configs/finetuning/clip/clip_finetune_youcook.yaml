@@ -1,10 +1,10 @@
-n_gpu: 4
+n_gpu: 6
 
 data_loader:
   type: FeatureDataloader
   args:
-    num_workers: 16
-    batch_size: 256
+    num_workers: 8
+    batch_size: 64
     shuffle: true
     drop_last: true
     dataset_name: 'YouCook2'
@@ -51,15 +51,15 @@ lr_scheduler:
 loss:
   type: CombinatorialLoss
   args:
-    tv_weight: 1
+    tv_weight: 0
     ta_weight: 1
-    va_weight: 1
-    t_va_weight: 1
-    v_ta_weight: 1
-    a_tv_weight: 1
+    va_weight: 0
+    t_va_weight: 0
+    v_ta_weight: 0
+    a_tv_weight: 0
 
 trainer:
-  epochs: 5
+  epochs: 20
   use_eval_mode_always: true
   resume_only_model: true
   mixed_precision: true

@@ -8,6 +8,15 @@ from everything_at_once.model.utils.layers import get_projection
 from everything_at_once.model.utils.fusion_transformer import FusionTransformer
 from everything_at_once.model.utils.davenet import load_DAVEnet
 
+def sim_matrix_up(a, b, eps=1e-8):
+    """
+    added eps for numerical stability
+    """
+    a = normalize_embeddings(a, eps)
+    b = normalize_embeddings(b, eps)
+
+    sim_mt = torch.mm(a, b.transpose(0, 1))
+    return sim_mt.mean().item()
 
 class EverythingAtOnceModel(nn.Module):
     def __init__(self,
@@ -29,9 +38,9 @@ class EverythingAtOnceModel(nn.Module):
         super().__init__()
 
         self.fusion = FusionTransformer(**fusion_params,attn_type= True)
-        self.fusion_t = FusionTransformer(**fusion_params)
-        self.fusion_v = FusionTransformer(**fusion_params)
-        self.fusion_a = FusionTransformer(**fusion_params)
+        self.fusion_single = FusionTransformer(**fusion_params)
+        #self.fusion_v = FusionTransformer(**fusion_params)
+        #self.fusion_a = FusionTransformer(**fusion_params)
 
         self.individual_projections = individual_projections
         self.use_positional_emb = use_positional_emb
@@ -141,7 +150,8 @@ class EverythingAtOnceModel(nn.Module):
         return {'all_tokens': x, 'attention_mask': attention_mask, 'special_token_mask': special_token_mask,
                 'nonempty_input_mask': nonempty_input_mask}
 
-    def forward(self, data, force_cross_modal=False):
+
+    def forward(self, data, force_cross_modal=False,train_phase =  True):
         output = {}
 
         text_raw_embed = self.extract_text_tokens(data['text'], data['text_mask'])
@@ -158,9 +168,13 @@ class EverythingAtOnceModel(nn.Module):
             video_raw_embed['all_tokens'] = video_raw_embed['all_tokens'] + self.video_pos_embed
             audio_raw_embed['all_tokens'] = audio_raw_embed['all_tokens'] + self.audio_pos_embed
 
-        text = self.fusion_t(text=text_raw_embed)['text']
-        video = self.fusion_v(video=video_raw_embed)['video']
-        audio = self.fusion_a(audio=audio_raw_embed)['audio']
+        tva = self.fusion_single(text=text_raw_embed,
+                             video=video_raw_embed,audio=audio_raw_embed)
+
+        #text = self.fusion_single(text=text_raw_embed)['text']
+        #video = self.fusion_single(video=video_raw_embed)['video']
+        #audio = self.fusion_single(audio=audio_raw_embed)['audio']
+
 
         if self.individual_projections:
             text_proj, video_proj, audio_proj = self.text_proj, self.video_proj, self.audio_proj
@@ -169,22 +183,37 @@ class EverythingAtOnceModel(nn.Module):
 
         #encoder outputs from single modality, contrastive loss is calculated between each pair, bidirection al or not ? Exp
         #print("text embed shape before proj i/p",text['embed'].shape)
-        output["text_embed"] = text_proj(text['embed'])
-        output["video_embed"] = video_proj(video['embed'])
-        #output["audio_embed"] = audio_proj(audio['embed'])
 
+        #text_sim=text_raw_embed['all_tokens']
+        #print(text_sim.shape, text_sim[:,0:20].shape)
         if self.cross_modal or force_cross_modal:
             #print(text_raw_embed['all_tokens'].shape)
             #print(text['all_tokens_fusion'].shape)
-            text_raw_embed['all_tokens'] = text['all_tokens_fusion']
-            video_raw_embed['all_tokens'] = video['all_tokens_fusion']
-            audio_raw_embed['all_tokens'] = audio['all_tokens_fusion']
+            text_raw_embed['all_tokens'] = tva['text']['all_tokens_fusion']
+            video_raw_embed['all_tokens'] = tva['video']['all_tokens_fusion']
+            audio_raw_embed['all_tokens'] = tva['audio']['all_tokens_fusion']
             tv = self.fusion(text=text_raw_embed,
                              video=video_raw_embed)
             ta = self.fusion(text=text_raw_embed,
                              audio=audio_raw_embed)
             va = self.fusion(video=video_raw_embed,
                              audio=audio_raw_embed)
+            
+            #text_var = (1*(normalize_embeddings(text_proj(ta['text']['embed'])))+
+                                        #1*(normalize_embeddings(text_proj(text['embed'])))+ 
+                                        #1*(normalize_embeddings(text_proj(tv['text']['embed']))))/3
+            
+            #sim1 = sim_matrix_up(text_proj(text['embed']), text_var)
+            #print("sim_t_tweighted",sim1)
+            #print("-!_!_!_!_!_!_!_!")
+            #sim2 = sim_matrix_up(video_proj(video['embed']),text_var)
+            #print("sim2_twie_video",sim2)
+            #print("-!_!_!_!_!_!_!_!")
+            #sim3  = sim_matrix_up(text_proj(text['embed']),video_proj(video['embed']))
+            #print("sim_b/w_t_and_v", sim3)
+            
+
+
 
             #print("text embed shape before proj i/p",tv['tv']['embed'].shape)
             if self.fusion.cls_token is not None:
@@ -193,9 +222,27 @@ class EverythingAtOnceModel(nn.Module):
                 output["ta_embed"] = self.proj(ta['text_audio']['embed'])
                 output["va_embed"] = self.proj(va['video_audio']['embed'])
             else:
-                #output["text_embed"] = self.text_proj(tv['text']['embed'])
-                #output["video_embed"] = self.video_proj(tv['video']['embed'])
-                output['audio_embed'] =  self.audio_proj(va['audio']['embed'])
+                """
+                output["text_embed"] = (0.005*(normalize_embeddings(text_proj(ta['text']['embed'])))+
+                                            0.99*(normalize_embeddings(text_proj(text['embed'])))+ 
+                                            0.005*(normalize_embeddings(text_proj(tv['text']['embed']))))
+                    
+                output["video_embed"] = (0.005*(normalize_embeddings(video_proj(va['video']['embed'])))+
+                                        0.99*(normalize_embeddings(video_proj(video['embed'])))+ 
+                                        0.005*(normalize_embeddings(video_proj(tv['video']['embed']))))
+                
+                output["audio_embed"] = (0.005*(normalize_embeddings(audio_proj(va['audio']['embed'])))+
+                                        0.99*(normalize_embeddings(audio_proj(audio['embed'])))+ 
+                                            0.005*(normalize_embeddings(audio_proj(ta['audio']['embed']))))
+                """
+                output["text_embed"] = text_proj(tva['text']['embed'])
+                output["video_embed"] = video_proj(tva['video']['embed'])
+                output["audio_embed"] = audio_proj(tva['audio']['embed'])
+
+                
+                #output["video_embed"] = self.video_proj(va['video']['embed'])
+                #output['audio_embed'] =  self.audio_proj(va['audio']['embed'])
+                #print("text in tv",tv['text']['embed'].shape,"video in tv",tv['video']['embed'].shape)
                 output["tv_embed"] = (normalize_embeddings(text_proj(tv['text']['embed'])) +
                                       normalize_embeddings(video_proj(tv['video']['embed']))) / 2
 

@@ -35,6 +35,7 @@ class MSRVTT_Dataset(Dataset):
             use_3D=True,
             key_2d='2d',
             key_3d='3d',
+            key_pooled ='clip_pooled'
     ):
         assert use_2D or use_3D
         self.data = pickle.load(open(data_path, 'rb'))
@@ -44,6 +45,7 @@ class MSRVTT_Dataset(Dataset):
         self.use_3D = use_3D
         self.key_2d = key_2d
         self.key_3d = key_3d
+        self.key_pooled = key_pooled
         self.we = we               #word embedding
         self.we_dim = we_dim       #word embedding dimension
         self.max_words = max_words
@@ -67,7 +69,7 @@ class MSRVTT_Dataset(Dataset):
             # TODO: make it more clean:
             # we need to know the real test size for a fair comparison
             # we count the missing test clips as mistakes
-            self.complete_dataset_size = 968
+            self.complete_dataset_size = 1000
 
     def __len__(self):
         return len(self.data)
@@ -96,17 +98,18 @@ class MSRVTT_Dataset(Dataset):
 
         # choose a caption
         if self.training:
-            try:
-                caption_clip = random.choice(self.data_2D[idx]['clip_text'])
-            except:
-                print(self.data_2D[idx])
+            #try:
+                #caption_clip = random.choice(self.data_2D[idx]['clip_text'])
+            #except:
+                #print(self.data_2D[idx])
             #caption_clip =  np.expand_dims(caption_clip,axis = 1)
             #caption_clip = np.transpose(caption_clip,)
-            caption_clip = torch.from_numpy(caption_clip).unsqueeze(0).permute(1,0)
+            #caption_clip = torch.from_numpy(caption_clip).unsqueeze(0).permute(1,0)
+
             caption = random.choice(self.data[idx]['caption'])
         else:
-            caption_clip = self.data_2D[idx]['clip_text_eval']
-            caption_clip = torch.from_numpy(caption_clip).unsqueeze(0).permute(1,0)
+            #caption_clip = self.data_2D[idx]['clip_text_eval']
+            #caption_clip = torch.from_numpy(caption_clip).unsqueeze(0).permute(1,0)
             caption = self.data[idx]['eval_caption']  
         words = _tokenize_text(caption)
         text, text_mask, raw_text = create_text_features(words, self.max_words, self.we, self.we_dim)
@@ -127,6 +130,5 @@ class MSRVTT_Dataset(Dataset):
         return {'video': video, 'audio': audio, 'text': text, 'audio_STFT_nframes': audio_STFT_nframes,
                 'video_mask': video_mask, 'audio_mask': audio_mask, 'text_mask': text_mask,
                 'raw_text':raw_text,
-                'caption_clip' : caption_clip,
                 'unroll_clips': unroll_clips,
                 'meta': {'paths': id_, 'ids': id_, 'dataset': dataset}}

@@ -15,9 +15,9 @@ data_loader:
       use_2D: True
       use_3D: False
       key_2d: 'clip'
-      max_words: 20
+      max_words: 44
       training: true
-      n_video_tokens: 48
+      n_video_tokens: 32 
       num_audio_STFT_frames: 3072
       word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
@@ -30,14 +30,14 @@ val_data_loaders:
       dataset_name: 'MSRVTT'
 
       dataset_kwargs:
-        data_path: './data/msrvtt/resnet/msrvtt_jsfusion_test.pkl'
+        data_path: './data/msrvtt/resnet/msrvtt_jsfusion_test_mod_caps.pkl'
         data_path_2D: './data/msrvtt/clip/msrvtt_jsfusion_test.pkl'
         use_2D: True
         use_3D: False
         key_2d: 'clip'
-        max_words: 20
+        max_words: 44
         training: false
-        n_video_tokens: 48
+        n_video_tokens: 32
         num_audio_STFT_frames: 3072
         word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
@@ -55,14 +55,14 @@ loss:
   type: CombinatorialLoss
   args:
     tv_weight: 1
-    ta_weight: 0
-    va_weight: 0
+    ta_weight: 1
+    va_weight: 1
     t_va_weight: 1
-    v_ta_weight: 0
-    a_tv_weight: 0
+    v_ta_weight: 1
+    a_tv_weight: 1
 
 trainer:
-  epochs: 20
+  epochs: 30
   use_eval_mode_always: true
   resume_only_model: true
   mixed_precision: true

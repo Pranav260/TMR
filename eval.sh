@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --account=project_462000189
-#SBATCH --partition=eap
+#SBATCH --partition=small-g
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --gpus-per-node=2
+#SBATCH --gpus-per-node=6
 #SBATCH --mem-per-cpu=8000
 #SBATCH --time=04:00:00
-#SBATCH --output=resnet_vivit_zeroshot_12.log
+#SBATCH --output=zshot_clip_0.1.log
 module use /appl/local/csc/soft/ai/modulefiles/
 module load pytorch
 export PYTHONUSERBASE=/scratch/project_462000189/pranav/everything_at_once

@@ -207,7 +207,7 @@ def eval(model, dl, device, metrics, loss_func=None, clip_text_model=None):
             for field in ['text', 'text_mask', 'video', 'video_mask', 'audio', 'audio_mask', 'audio_STFT_nframes', 'caption', 'image']:
                 if field in data:
                     data[field] = _move_to_device(data[field], device)
-            embeds = model(data, force_cross_modal=True)
+            embeds = model(data, force_cross_modal=True,train_phase = False)
             for name, embed in embeds.items():
                 if '_embed' in name:
                     embed_arr[name].append(embed.cpu())

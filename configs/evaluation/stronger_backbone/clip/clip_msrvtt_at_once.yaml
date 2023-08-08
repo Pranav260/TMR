@@ -1,16 +1,16 @@
-n_gpu: 4
+n_gpu: 1
 
 data_loader:
   type: FeatureDataloader
   args:
-    num_workers: 16
+    num_workers: 8
     batch_size: 16
     shuffle: false
     dataset_name: 'MSRVTT'
 
     dataset_kwargs:
       data_path: './data/msrvtt/resnet/msrvtt_jsfusion_test.pkl'
-      data_path_2D: './data/msrvtt/clip/msrvtt_test_vivit.pkl'
+      data_path_2D: './data/msrvtt/clip/msrvtt_jsfusion_test.pkl'
       use_2D: True
       use_3D: False
       key_2d: 'clip'

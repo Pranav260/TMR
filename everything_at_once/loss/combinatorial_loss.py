@@ -27,13 +27,13 @@ class CombinatorialLoss(nn.Module):
         self.av_weight = 0
         
         self.t_va_weight = t_va_weight
-        self.va_t_weight = 1
+        self.va_t_weight = 0
         
         self.v_ta_weight = v_ta_weight
-        self.ta_v_weight = 1
+        self.ta_v_weight = 0
 
         self.a_tv_weight = a_tv_weight
-        self.tv_a_weight = 1
+        self.tv_a_weight = 0
 
     def forward(self, input_data):
 
@@ -63,7 +63,7 @@ class CombinatorialLoss(nn.Module):
         nonempty['a_tv'] = input_data['audio_nonempty_input_mask'] & (
                     input_data['text_nonempty_input_mask'] & input_data['video_nonempty_input_mask'])
         
-        #nonempty['tv_a'] = (input_data['text_nonempty_input_mask'] & input_data['video_nonempty_input_mask']) & input_data['audio_nonempty_input_mask']
+        nonempty['tv_a'] = (input_data['text_nonempty_input_mask'] & input_data['video_nonempty_input_mask']) & input_data['audio_nonempty_input_mask']
 
         #print("non-empty shapes",nonempty['t_va'].shape,nonempty['va'].shape)
         loss_sum = 0

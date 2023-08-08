@@ -70,7 +70,7 @@ class FusionTransformer(nn.Module):
 
         if self.attn_type == False:
             # concatenate attention masks
-            tokens_mask = torch.cat(tokens_mask, dim=1)
+            #tokens_mask = torch.cat(tokens_mask, dim=1)
 
 
             # concatenate cls token
@@ -84,13 +84,13 @@ class FusionTransformer(nn.Module):
                 offset = 1
 
             for block in self.blocks:
-                tokens = block(tokens, attention_mask=tokens_mask)
+                tokens = block(tokens, attn_mask_t=tokens_mask[0],attn_mask_v = tokens_mask[1],attn_mask_a =tokens_mask[2])
 
 
             if text is not None:
                 n_tokens = text['all_tokens'].size(1)
                 attention_mask = text['attention_mask']
-                all_tokens_fusion = tokens[:,:,:]
+                all_tokens_fusion = tokens[:,offset:offset + n_tokens,:]
                 all_tokens = tokens[:, offset:offset + n_tokens]
 
                 offset += n_tokens
@@ -103,7 +103,7 @@ class FusionTransformer(nn.Module):
             if video is not None:
                 n_tokens = video['all_tokens'].size(1)
                 attention_mask = video['attention_mask']
-                all_tokens_fusion = tokens[:,:,:]
+                all_tokens_fusion = tokens[:,offset:offset + n_tokens,:]
                 all_tokens = tokens[:, offset:offset + n_tokens]
 
                 offset += n_tokens
@@ -116,7 +116,7 @@ class FusionTransformer(nn.Module):
             if audio is not None:
                 n_tokens = audio['all_tokens'].size(1)
                 attention_mask = audio['attention_mask']
-                all_tokens_fusion = tokens[:,:,:]
+                all_tokens_fusion = tokens[:,offset:offset + n_tokens,:]
                 all_tokens = tokens[:, offset: offset + n_tokens]
                 offset += n_tokens
                 output['audio'] = {

@@ -8,12 +8,12 @@ from timm.models.vision_transformer import DropPath, Mlp, Attention
 class GatedEmbeddingUnit(nn.Module):
     def __init__(self, input_dimension, output_dimension):
         super().__init__()
-        self.fc = nn.Linear(input_dimension, output_dimension)
-        self.cg = ContextGating(output_dimension)
+        self.fc1 = nn.Linear(input_dimension, output_dimension)
+        self.cg1 = ContextGating(output_dimension)
 
     def forward(self, x):
-        x = self.fc(x)
-        x = self.cg(x)
+        x = self.fc1(x)
+        x = self.cg1(x)
         return x
 
 
@@ -66,7 +66,7 @@ class FusionBlock(nn.Module):
         self.attn_flag = attn_flag
         self.norm1 = norm_layer(dim)
         if attn_flag == False:
-            self.attn = FusionAttention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
+            self.attn = FusionAttention_updated(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         else:
             self.attn_cross = CrossAttention_updated(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
@@ -76,9 +76,9 @@ class FusionBlock(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-    def forward(self, x = None,attention_mask_x = None, attention_mask_x_ = None, attention_mask=None):
+    def forward(self, x = None,attention_mask_x = None, attention_mask_x_ = None,attn_mask_t=None,attn_mask_v = None,attn_mask_a =None):
         if attention_mask_x_ is None:
-            x = x + self.drop_path(self.attn(self.norm1(x), attention_mask))
+            x = x + self.drop_path(self.attn(self.norm1(x),attn_mask_t,attn_mask_v,attn_mask_a))
             x = x + self.drop_path(self.mlp(self.norm2(x)))
         else:
             x = x + self.drop_path(self.attn_cross(self.norm1(x),attention_mask_x,attention_mask_x_))
@@ -92,13 +92,10 @@ class CrossAttention_updated(Attention): # for depth 2 this does not work, why ?
     Copyright 2020, Ross Wightman
     """
     def forward(self,x = None,attention_mask_x=None, attention_mask_x_=None):
-        #print("error here",x.shape)
         x1 = x[:,:attention_mask_x.shape[1],:]
         x2 = x[:,attention_mask_x.shape[1]:,:]
         B, N, C = x1.shape
         B,N_, C_ = x2.shape
-        #print("xi shape=",x1.shape)
-        #print("x2 shape",x2.shape)
 
         qkv_x = self.qkv(x1).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         qkv_x_ = self.qkv(x2).reshape(B, N_, 3, self.num_heads, C_ // self.num_heads).permute(2, 0, 3, 1, 4)
@@ -174,6 +171,68 @@ class FusionAttention(Attention):
         attn = self.attn_drop(attn)
 
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+        #print("shape of proj drop in fusion attn",x.shape)
+        return x
+
+class FusionAttention_updated(Attention):
+    """
+    Adopted from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
+    Copyright 2020, Ross Wightman
+    """
+    def forward(self, x,attn_mask_t=None,attn_mask_v = None,attn_mask_a =None ):
+        
+        x_t = x[:,:attn_mask_t.shape[1],:]
+        x_v = x[:,44:76,:]
+        x_a = x[:,76:124,:]
+
+        B, N, C = x_t.shape
+        Bv,Nv,Cv = x_v.shape
+        Ba,Na,Ca = x_a.shape
+
+        qkv = self.qkv(x_t).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv2 = self.qkv(x_v).reshape(Bv, Nv, 3, self.num_heads, Cv // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv3 = self.qkv(x_a).reshape(Ba, Na, 3, self.num_heads, Ca // self.num_heads).permute(2, 0, 3, 1, 4)
+        #print("main qkv shape",qkv.shape)
+        q, k, v = qkv[0],qkv[1], qkv[2]
+        q2, k2, v2 = qkv2[0], qkv2[1], qkv2[2]
+        q3, k3, v3 = qkv3[0], qkv3[1], qkv3[2]
+        
+
+        attn1 = (q @ k.transpose(-2, -1)) * self.scale
+        attn2 = (q2 @ k2.transpose(-2, -1)) * self.scale
+        attn3 = (q3 @ k3.transpose(-2, -1)) * self.scale
+
+
+        if attn_mask_t is not None:
+            zero_attention_mask = (attn_mask_t == 0).view(B, 1, 1, N).expand_as(attn1)  # (bs, n_heads, q_length, k_length)
+            attn1.masked_fill_(zero_attention_mask, -float("inf"))  # (bs, n_heads, q_length, k_length)
+
+        if attn_mask_v is not None:
+            zero_attention_mask_2 = (attn_mask_v == 0).view(Bv, 1, 1, Nv).expand_as(attn2)  # (bs, n_heads, q_length, k_length)
+            attn2.masked_fill_(zero_attention_mask_2, -float("inf"))  # (bs, n_heads, q_length, k_length)
+
+        if attn_mask_a is not None:
+            zero_attention_mask_3 = (attn_mask_a == 0).view(Ba, 1, 1, Na).expand_as(attn3)  # (bs, n_heads, q_length, k_length)
+            attn3.masked_fill_(zero_attention_mask_3, -float("inf"))  # (bs, n_heads, q_length, k_length)
+            
+
+        attn1 = attn1.softmax(dim=-1)
+        attn1 = self.attn_drop(attn1)
+
+        attn2 = attn2.softmax(dim=-1)
+        attn2 = self.attn_drop(attn2)
+
+        attn3 = attn3.softmax(dim=-1)
+        attn3 = self.attn_drop(attn3)
+
+        x_t = (attn1 @ v).transpose(1, 2).reshape(B, N, C)
+        x_v = (attn2 @ v2).transpose(1, 2).reshape(Bv, Nv, Cv)
+        x_a = (attn3 @ v3).transpose(1, 2).reshape(Ba, Na, Ca)
+
+        x = [x_t,x_v,x_a]
+        x = torch.cat(x,dim = 1)
         x = self.proj(x)
         x = self.proj_drop(x)
         #print("shape of proj drop in fusion attn",x.shape)

@@ -39,7 +39,7 @@ def run():
     epoch = checkpoint['epoch']
     state_dict = checkpoint['state_dict']
     new_state_dict = state_dict_data_parallel_fix(state_dict, model.state_dict())
-    model.load_state_dict(new_state_dict, strict=True)
+    model.load_state_dict(new_state_dict, strict=False)
 
     if config['n_gpu'] > 1:
         model = torch.nn.DataParallel(model)
