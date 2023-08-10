@@ -18,7 +18,7 @@ data_loader:
       max_words: 44
       training: true
       n_video_tokens: 32 
-      num_audio_STFT_frames: 3072
+      num_audio_STFT_frames: 2400
       word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
 val_data_loaders:
@@ -38,7 +38,7 @@ val_data_loaders:
         max_words: 44
         training: false
         n_video_tokens: 32
-        num_audio_STFT_frames: 3072
+        num_audio_STFT_frames: 2400
         word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
 

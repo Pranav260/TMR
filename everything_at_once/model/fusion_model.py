@@ -119,11 +119,14 @@ class EverythingAtOnceModel(nn.Module):
         audio = self.davenet(audio)
         audio = audio.permute(0, 2, 1)
 
-        coef = int(np.ceil(attention_mask.shape[1] / audio.shape[1]))
+       # print("audio shape",audio.shape,"attn mask shape",attention_mask.shape)
+        coef = 63 #int(np.ceil(attention_mask.shape[1] / audio.shape[1])) 
         attention_mask = torch.nn.functional.max_pool1d(attention_mask.unsqueeze(0), kernel_size=coef).squeeze(0)
+        #print("attn mask after operation", attention_mask.shape)
         audio_STFT_nframes = (audio_STFT_nframes / coef).int()
-
+        #print("here")
         if (self.audio_max_tokens is not None) and (audio.shape[1] > self.audio_max_tokens):
+            #print("here1")
             new_audio, new_audio_mask = [], []
             for i in range(len(audio)):
                 cur_audio, cur_audio_mask = create_audio_tokens(
