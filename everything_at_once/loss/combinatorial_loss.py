@@ -5,7 +5,7 @@ from everything_at_once.model.utils.utils import sim_matrix
 
 
 class CombinatorialLoss(nn.Module):
-    def __init__(self, contrastive_loss='NormSoftmax', temperature=0.02,
+    def __init__(self, contrastive_loss='NormSoftmax', temperature=0.05,
                  tv_weight=0, ta_weight=0, va_weight=0,
                  t_va_weight=0, v_ta_weight=0, a_tv_weight=0):
         super().__init__()

@@ -7,7 +7,7 @@
 #SBATCH --gpus-per-node=4
 #SBATCH --mem-per-cpu=8000
 #SBATCH --time=7:30:00
-#SBATCH --output=log_files/mrs_pool_local_audio_tkred1.log
+#SBATCH --output=log_files_1/wo_pretrained_my_arch_mod_caps.log
 module use /appl/local/csc/soft/ai/modulefiles/
 module load pytorch
 export PYTHONUSERBASE=/scratch/project_462000189/pranav/everything_at_once

@@ -38,9 +38,9 @@ class EverythingAtOnceModel(nn.Module):
         super().__init__()
 
         self.fusion = FusionTransformer(**fusion_params,attn_type= True)
-        self.fusion_single = FusionTransformer(**fusion_params)
-        #self.fusion_v = FusionTransformer(**fusion_params)
-        #self.fusion_a = FusionTransformer(**fusion_params)
+        self.fusion_t = FusionTransformer(**fusion_params)
+        self.fusion_v = FusionTransformer(**fusion_params)
+        self.fusion_a = FusionTransformer(**fusion_params)
 
         self.individual_projections = individual_projections
         self.use_positional_emb = use_positional_emb
@@ -120,7 +120,7 @@ class EverythingAtOnceModel(nn.Module):
         audio = audio.permute(0, 2, 1)
 
        # print("audio shape",audio.shape,"attn mask shape",attention_mask.shape)
-        coef = 63 #int(np.ceil(attention_mask.shape[1] / audio.shape[1])) 
+        coef = int(np.ceil(attention_mask.shape[1] / audio.shape[1])) 
         attention_mask = torch.nn.functional.max_pool1d(attention_mask.unsqueeze(0), kernel_size=coef).squeeze(0)
         #print("attn mask after operation", attention_mask.shape)
         audio_STFT_nframes = (audio_STFT_nframes / coef).int()
@@ -171,12 +171,9 @@ class EverythingAtOnceModel(nn.Module):
             video_raw_embed['all_tokens'] = video_raw_embed['all_tokens'] + self.video_pos_embed
             audio_raw_embed['all_tokens'] = audio_raw_embed['all_tokens'] + self.audio_pos_embed
 
-        tva = self.fusion_single(text=text_raw_embed,
-                             video=video_raw_embed,audio=audio_raw_embed)
-
-        #text = self.fusion_single(text=text_raw_embed)['text']
-        #video = self.fusion_single(video=video_raw_embed)['video']
-        #audio = self.fusion_single(audio=audio_raw_embed)['audio']
+        text = self.fusion_t(text=text_raw_embed)['text']
+        video = self.fusion_v(video=video_raw_embed)['video']
+        audio = self.fusion_a(audio=audio_raw_embed)['audio']
 
 
         if self.individual_projections:
@@ -192,9 +189,9 @@ class EverythingAtOnceModel(nn.Module):
         if self.cross_modal or force_cross_modal:
             #print(text_raw_embed['all_tokens'].shape)
             #print(text['all_tokens_fusion'].shape)
-            text_raw_embed['all_tokens'] = tva['text']['all_tokens_fusion']
-            video_raw_embed['all_tokens'] = tva['video']['all_tokens_fusion']
-            audio_raw_embed['all_tokens'] = tva['audio']['all_tokens_fusion']
+            text_raw_embed['all_tokens'] = text['all_tokens_fusion']
+            video_raw_embed['all_tokens'] = video['all_tokens_fusion']
+            audio_raw_embed['all_tokens'] = audio['all_tokens_fusion']
             tv = self.fusion(text=text_raw_embed,
                              video=video_raw_embed)
             ta = self.fusion(text=text_raw_embed,
@@ -225,22 +222,9 @@ class EverythingAtOnceModel(nn.Module):
                 output["ta_embed"] = self.proj(ta['text_audio']['embed'])
                 output["va_embed"] = self.proj(va['video_audio']['embed'])
             else:
-                """
-                output["text_embed"] = (0.005*(normalize_embeddings(text_proj(ta['text']['embed'])))+
-                                            0.99*(normalize_embeddings(text_proj(text['embed'])))+ 
-                                            0.005*(normalize_embeddings(text_proj(tv['text']['embed']))))
-                    
-                output["video_embed"] = (0.005*(normalize_embeddings(video_proj(va['video']['embed'])))+
-                                        0.99*(normalize_embeddings(video_proj(video['embed'])))+ 
-                                        0.005*(normalize_embeddings(video_proj(tv['video']['embed']))))
-                
-                output["audio_embed"] = (0.005*(normalize_embeddings(audio_proj(va['audio']['embed'])))+
-                                        0.99*(normalize_embeddings(audio_proj(audio['embed'])))+ 
-                                            0.005*(normalize_embeddings(audio_proj(ta['audio']['embed']))))
-                """
-                output["text_embed"] = text_proj(tva['text']['embed'])
-                output["video_embed"] = video_proj(tva['video']['embed'])
-                output["audio_embed"] = audio_proj(tva['audio']['embed'])
+                output["text_embed"] = text_proj(text['embed'])
+                output["video_embed"] = video_proj(video['embed'])
+                output["audio_embed"] = audio_proj(audio['embed'])
 
                 
                 #output["video_embed"] = self.video_proj(va['video']['embed'])

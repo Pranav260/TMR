@@ -66,7 +66,7 @@ class FusionBlock(nn.Module):
         self.attn_flag = attn_flag
         self.norm1 = norm_layer(dim)
         if attn_flag == False:
-            self.attn = FusionAttention_updated(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
+            self.attn = FusionAttention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         else:
             self.attn_cross = CrossAttention_updated(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
@@ -76,9 +76,9 @@ class FusionBlock(nn.Module):
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
-    def forward(self, x = None,attention_mask_x = None, attention_mask_x_ = None,attn_mask_t=None,attn_mask_v = None,attn_mask_a =None):
+    def forward(self, x = None,attention_mask_x = None, attention_mask_x_ = None,attention_mask = None):
         if attention_mask_x_ is None:
-            x = x + self.drop_path(self.attn(self.norm1(x),attn_mask_t,attn_mask_v,attn_mask_a))
+            x = x + self.drop_path(self.attn(self.norm1(x),attention_mask))
             x = x + self.drop_path(self.mlp(self.norm2(x)))
         else:
             x = x + self.drop_path(self.attn_cross(self.norm1(x),attention_mask_x,attention_mask_x_))

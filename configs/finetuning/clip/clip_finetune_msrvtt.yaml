@@ -15,10 +15,10 @@ data_loader:
       use_2D: True
       use_3D: False
       key_2d: 'clip'
-      max_words: 44
+      max_words: 30
       training: true
-      n_video_tokens: 32 
-      num_audio_STFT_frames: 2400
+      n_video_tokens: 48 
+      num_audio_STFT_frames: 3072
       word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
 val_data_loaders:
@@ -35,10 +35,10 @@ val_data_loaders:
         use_2D: True
         use_3D: False
         key_2d: 'clip'
-        max_words: 44
+        max_words: 30
         training: false
-        n_video_tokens: 32
-        num_audio_STFT_frames: 2400
+        n_video_tokens: 48
+        num_audio_STFT_frames: 3072
         word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
 
