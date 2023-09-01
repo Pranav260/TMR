@@ -15,9 +15,9 @@ data_loader:
       use_2D: True
       use_3D: False
       key_2d: 'clip'
-      max_words: 30
+      max_words: 32
       training: true
-      n_video_tokens: 48 
+      n_video_tokens: 32 
       num_audio_STFT_frames: 3072
       word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 
@@ -30,14 +30,14 @@ val_data_loaders:
       dataset_name: 'MSRVTT'
 
       dataset_kwargs:
-        data_path: './data/msrvtt/resnet/msrvtt_jsfusion_test_mod_caps.pkl'
+        data_path: './data/msrvtt/resnet/msrvtt_jsfusion_test.pkl'
         data_path_2D: './data/msrvtt/clip/msrvtt_jsfusion_test.pkl'
         use_2D: True
         use_3D: False
         key_2d: 'clip'
-        max_words: 30
+        max_words: 32
         training: false
-        n_video_tokens: 48
+        n_video_tokens: 32
         num_audio_STFT_frames: 3072
         word2vec_path: './data/GoogleNews-vectors-negative300.bin'
 

@@ -248,6 +248,6 @@ class BaseTrainer:
                 #self.optimizer.load_state_dict(checkpoint['optimizer'])
                 print("state dict not loaded")
 
-        self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
+        self.logger.info("Checkpoint not loaded !!!!. Resume training from epoch {}".format(self.start_epoch))
         del checkpoint, new_state_dict
         torch.cuda.empty_cache()

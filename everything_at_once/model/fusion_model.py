@@ -181,11 +181,6 @@ class EverythingAtOnceModel(nn.Module):
         else:
             text_proj, video_proj, audio_proj = self.proj, self.proj, self.proj
 
-        #encoder outputs from single modality, contrastive loss is calculated between each pair, bidirection al or not ? Exp
-        #print("text embed shape before proj i/p",text['embed'].shape)
-
-        #text_sim=text_raw_embed['all_tokens']
-        #print(text_sim.shape, text_sim[:,0:20].shape)
         if self.cross_modal or force_cross_modal:
             #print(text_raw_embed['all_tokens'].shape)
             #print(text['all_tokens_fusion'].shape)
@@ -199,21 +194,7 @@ class EverythingAtOnceModel(nn.Module):
             va = self.fusion(video=video_raw_embed,
                              audio=audio_raw_embed)
             
-            #text_var = (1*(normalize_embeddings(text_proj(ta['text']['embed'])))+
-                                        #1*(normalize_embeddings(text_proj(text['embed'])))+ 
-                                        #1*(normalize_embeddings(text_proj(tv['text']['embed']))))/3
-            
-            #sim1 = sim_matrix_up(text_proj(text['embed']), text_var)
-            #print("sim_t_tweighted",sim1)
-            #print("-!_!_!_!_!_!_!_!")
-            #sim2 = sim_matrix_up(video_proj(video['embed']),text_var)
-            #print("sim2_twie_video",sim2)
-            #print("-!_!_!_!_!_!_!_!")
-            #sim3  = sim_matrix_up(text_proj(text['embed']),video_proj(video['embed']))
-            #print("sim_b/w_t_and_v", sim3)
-            
-
-
+        
 
             #print("text embed shape before proj i/p",tv['tv']['embed'].shape)
             if self.fusion.cls_token is not None:
@@ -225,11 +206,6 @@ class EverythingAtOnceModel(nn.Module):
                 output["text_embed"] = text_proj(text['embed'])
                 output["video_embed"] = video_proj(video['embed'])
                 output["audio_embed"] = audio_proj(audio['embed'])
-
-                
-                #output["video_embed"] = self.video_proj(va['video']['embed'])
-                #output['audio_embed'] =  self.audio_proj(va['audio']['embed'])
-                #print("text in tv",tv['text']['embed'].shape,"video in tv",tv['video']['embed'].shape)
                 output["tv_embed"] = (normalize_embeddings(text_proj(tv['text']['embed'])) +
                                       normalize_embeddings(video_proj(tv['video']['embed']))) / 2
 
@@ -238,9 +214,6 @@ class EverythingAtOnceModel(nn.Module):
 
                 output["va_embed"] = (normalize_embeddings(video_proj(va['video']['embed'])) +
                                       normalize_embeddings(audio_proj(va['audio']['embed']))) / 2
-                #output["tv_embed"] = self.text_proj(tv['tv']['embed'])
-                #output["ta_embed"] = self.text_proj(ta['ta']['embed'])
-                #output["va_embed"] = self.video_proj(va['va']['embed'])
     
         if force_cross_modal:
             #  needed for ablation
