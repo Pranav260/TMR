@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=project_462000189
-#SBATCH --partition=dev-g
+#SBATCH --partition=small-g
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
