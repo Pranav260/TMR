@@ -1,4 +1,4 @@
-n_gpu: 4
+n_gpu: 8
 
 data_loader:
   type: FeatureDataloader

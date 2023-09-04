@@ -44,8 +44,8 @@ class CombinatorialLoss(nn.Module):
         #print("shape of tv",input_data['text_nonempty_input_mask'] & input_data['video_nonempty_input_mask'])
 
 
-        nonempty['ttv'] = input_data['text_nonempty_input_mask'] & input_data['text_nonempty_input_mask']
-        nonempty['tta'] = input_data['text_nonempty_input_mask'] & input_data['text_nonempty_input_mask']
+        nonempty['ttv'] = input_data['text_nonempty_input_mask'] & (input_data['text_nonempty_input_mask'] & input_data['video_nonempty_input_mask'])
+        nonempty['tta'] = input_data['text_nonempty_input_mask'] & (input_data['text_nonempty_input_mask'] & input_data['audio_nonempty_input_mask'])
 
 
         nonempty['tv'] = input_data['text_nonempty_input_mask'] & input_data['video_nonempty_input_mask']
@@ -76,9 +76,9 @@ class CombinatorialLoss(nn.Module):
 
         for name, embed_name1, embed_name2, weight in [
             #('vt','video_embed','text_embed',self.vt_weight),
-            ('tv', 'text_embed', 'video_embed', self.tv_weight),
+            #('tv', 'text_embed', 'video_embed', self.tv_weight),
             #('at', 'audio_embed','text_embed', self.at_weight), # fix this
-            ('ta', 'text_embed', 'audio_embed', self.ta_weight), 
+            #('ta', 'text_embed', 'audio_embed', self.ta_weight), 
             #('va', 'video_embed', 'audio_embed', self.va_weight),
             #('av','audio_embed', 'video_embed', self.av_weight),
             #('va_t','va_embed','text_embed',self.va_t_weight),
