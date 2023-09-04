@@ -86,8 +86,8 @@ class CombinatorialLoss(nn.Module):
             #('ta_v','ta_embed','video_embed',self.ta_v_weight),
             #('v_ta', 'video_embed', 'ta_embed', self.v_ta_weight),
             #('a_tv', 'audio_embed', 'tv_embed', self.a_tv_weight),
-            ('ttv','text_embed','tv_embed',1),
-            ('tta','text_embed','ta_embed',1),
+            #('ttv','text_embed','tv_embed',1),
+            #('tta','text_embed','ta_embed',1),
             #('tv_a','tv_embed','audio_embed',self.tv_a_weight),
         ]:
             if (embed_name1 in input_data) and (embed_name2 in input_data) and (weight != 0):
