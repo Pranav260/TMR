@@ -15,7 +15,7 @@ data_loader:
       use_2D: True
       use_3D: False
       key_2d: 'clip'
-      max_words: 20
+      max_words: 32
       training: true
       n_video_tokens: 32 
       num_audio_STFT_frames: 2048
