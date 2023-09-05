@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --account=project_462000189
-#SBATCH --partition=small-g
+#SBATCH --partition=standard-g
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=16
-#SBATCH --gpus-per-node=8
+#SBATCH --gpus-per-node=4
 #SBATCH --mem-per-cpu=8000
 #SBATCH --time=5:00:00
-#SBATCH --output=log_files_1/ma_Ecase.log
+#SBATCH --output=log_files_1/ma_t_all.log
 module use /appl/local/csc/soft/ai/modulefiles/
 module load pytorch
 export PYTHONUSERBASE=/scratch/project_462000189/pranav/everything_at_once
