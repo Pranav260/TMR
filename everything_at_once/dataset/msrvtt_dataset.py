@@ -69,7 +69,7 @@ class MSRVTT_Dataset(Dataset):
             # TODO: make it more clean:
             # we need to know the real test size for a fair comparison
             # we count the missing test clips as mistakes
-            self.complete_dataset_size = 1000
+            self.complete_dataset_size = 968
 
     def __len__(self):
         return len(self.data)

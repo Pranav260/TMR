@@ -18,6 +18,8 @@ def sim_matrix_up(a, b, eps=1e-8):
     sim_mt = torch.mm(a, b.transpose(0, 1))
     return sim_mt.mean().item()
 
+print("here")
+
 class EverythingAtOnceModel(nn.Module):
     def __init__(self,
                  video_embed_dim,
@@ -54,7 +56,7 @@ class EverythingAtOnceModel(nn.Module):
 
         # audio token preprocess
         self.davenet = load_DAVEnet(v2=davenet_v2)
- 
+        #print("here")
         if audio_max_num_STFT_frames is not None:
             if davenet_v2:
                 audio_max_tokens = int(audio_max_num_STFT_frames / 64)
