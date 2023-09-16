@@ -76,9 +76,9 @@ class CombinatorialLoss(nn.Module):
 
         for name, embed_name1, embed_name2, weight in [
             #('vt','video_embed','text_embed',self.vt_weight),
-            ('tv', 'text_embed', 'video_embed', self.tv_weight),
+            #('tv', 'text_embed', 'video_embed', self.tv_weight),
             #('at', 'audio_embed','text_embed', self.at_weight), # fix this
-            ('ta', 'text_embed', 'audio_embed', self.ta_weight), 
+            #('ta', 'text_embed', 'audio_embed', self.ta_weight), 
             #('va', 'video_embed', 'audio_embed', self.va_weight),
             #('av','audio_embed', 'video_embed', self.av_weight),
             #('va_t','va_embed','text_embed',self.va_t_weight),
@@ -86,8 +86,8 @@ class CombinatorialLoss(nn.Module):
             #('ta_v','ta_embed','video_embed',self.ta_v_weight),
             #('v_ta', 'video_embed', 'ta_embed', self.v_ta_weight),
             #('a_tv', 'audio_embed', 'tv_embed', self.a_tv_weight),
-            ('ttv','text_embed','tv_embed',1),
-            ('tta','text_embed','ta_embed',1),
+            #('ttv','text_embed','tv_embed',1),
+            #('tta','text_embed','ta_embed',1),
             #('tv_a','tv_embed','audio_embed',self.tv_a_weight),
         ]:
             if (embed_name1 in input_data) and (embed_name2 in input_data) and (weight != 0):
