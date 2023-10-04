@@ -219,17 +219,16 @@ class EverythingAtOnceModel(nn.Module):
                 
                 #output['tv_cross'] = normalize_embeddings(text_proj(tv['text']['embed']))
                 #output['ta_cross'] = normalize_embeddings(text_proj(ta['text']['embed']))
-                
-    
+                output["v+a_embed"] = (normalize_embeddings(output["video_embed"]) +
+                                   normalize_embeddings(output["audio_embed"])) / 2
+        
         if force_cross_modal:
             #  needed for ablation
             output["t+v_embed"] = (normalize_embeddings(output["text_embed"]) +
                                    normalize_embeddings(output["video_embed"])) / 2
             output["t+a_embed"] = (normalize_embeddings(output["text_embed"]) +
                                    normalize_embeddings(output["audio_embed"])) / 2
-            output["v+a_embed"] = (normalize_embeddings(output["video_embed"]) +
-                                   normalize_embeddings(output["audio_embed"])) / 2
-        
+    
         return output
 
 class EverythingAtOnceModel_TV_Only(EverythingAtOnceModel):

@@ -237,7 +237,7 @@ class BaseTrainer:
         else:
             new_state_dict = state_dict
 
-        #self.model.load_state_dict(new_state_dict, strict = False)
+        self.model.load_state_dict(new_state_dict, strict = False)
 
         if not self.resume_only_model:
             # load optimizer state from checkpoint only when optimizer type is not changed.
@@ -245,9 +245,9 @@ class BaseTrainer:
                 self.logger.warning("Warning: Optimizer type given in config file is different from that of checkpoint. "
                                     "Optimizer parameters not being resumed.")
             else:
-                #self.optimizer.load_state_dict(checkpoint['optimizer'])
-                print("state dict not loaded")
+                self.optimizer.load_state_dict(checkpoint['optimizer'])
+                #print("state dict not loaded")
 
-        self.logger.info("Checkpoint not loaded !!!!. Resume training from epoch {}".format(self.start_epoch))
+        self.logger.info("Checkpoint loaded !!!!. Resume training from epoch {}".format(self.start_epoch))
         del checkpoint, new_state_dict
         torch.cuda.empty_cache()

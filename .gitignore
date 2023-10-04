@@ -14,3 +14,5 @@ output
 zshot_clip_0.1.log
 log_files_1
 unique_indices_t2va.pkl
+log_files_2
+top5_indices_t2va.pkl
