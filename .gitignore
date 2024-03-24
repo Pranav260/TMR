@@ -16,3 +16,11 @@ log_files_1
 unique_indices_t2va.pkl
 log_files_2
 top5_indices_t2va.pkl
+vivit_model1.py
+work.log
+train_vivit_msr_vtt.py
+train_no_transformer.sh
+all_weights_1.log
+test_1.log
+msr_vtt_frames.py
+eval.sh
