@@ -10,6 +10,7 @@ Following is contained in the Repository:
 - Code and parameters for our benchmark model
 - model weights for our benchmark model
 -  The implementation is an extension of the following [work](https://github.com/ninatu/everything_at_once). This repository provides the pretrained backbone models and features used for fine-tuning and evaluations.
+-  The trained models and checkpoints for our experiments will be provided soon.
 
 ## Environment setup:
 
